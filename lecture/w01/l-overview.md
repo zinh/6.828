@@ -107,24 +107,24 @@ the Unix shell.
     message based on <code>errno</code>.
   * Many systems calls are encapsulated in libc calls (e.g., fgets vs read)
 
-<!-- 
+```
   Demo:
   - open sh.c in emacs
   - look at main()
   - look at runcmd()
   - look at fgets()
   - man 3 fgets()
-  -->
+  ```
   
 * Trace system calls $ ls
     * On OSX: sudo dtruss ./a.out  (where a.out is the compiled sh.c)
     * On Linux: strace ./a.out
 
-<!--
+```
   - compile sh.c
   - run ./a.out
   - strace ./a.out
-  -->
+  ```
 
   * what does fork() do?
     copies user memory
@@ -137,14 +137,14 @@ the Unix shell.
 	waits for any child to exit
 	what if child exits before parent calls wait?
 
-<!--
+```
     - strace /bin/sh
     - study output:
     read()
     write()
     stat()
     etc.
-	-->
+```
 
   * what are file descriptors? (0, 1, 2, etc. in read/write)
   [echo.c](https://pdos.csail.mit.edu/6.828/2014/lec/l-overview/echo.c)
