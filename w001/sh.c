@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <sys/errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -6,6 +7,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 // Simplifed xv6 shell.
 
@@ -26,7 +28,7 @@ struct redircmd {
   int type;          // < or > 
   struct cmd *cmd;   // the command to be run (e.g., an execcmd)
   char *file;        // the input/output file
-  int mode;          // the mode to open the file with
+  int flags;         // flags for open() indicating read or write
   int fd;            // the file descriptor number to use for the file
 };
 
@@ -49,22 +51,23 @@ runcmd(struct cmd *cmd)
   struct redircmd *rcmd;
 
   if(cmd == 0)
-    exit(0);
+    _exit(0);
   
   switch(cmd->type){
   default:
     fprintf(stderr, "unknown runcmd\n");
-    exit(-1);
+    _exit(-1);
 
   case ' ':
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit(0);
-    // fprintf(stderr, "exec not implemented\n");
-    execv(ecmd->argv[0], ecmd->argv);
-    fprintf(stderr, "open %s failed", ecmd->argv[0]);
+      _exit(0);
+    if (execvp(ecmd->argv[0], ecmd->argv) == -1) {
+      char * errmsg = strerror(errno);
+      fprintf(stderr, "%s\n", errmsg);
+      _exit(0);
+    }
     break;
-
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
@@ -79,19 +82,17 @@ runcmd(struct cmd *cmd)
     // Your code here ...
     break;
   }    
-  exit(0);
+  _exit(0);
 }
 
 int
 getcmd(char *buf, int nbuf)
 {
-  
   if (isatty(fileno(stdin)))
     fprintf(stdout, "6.828$ ");
   memset(buf, 0, nbuf);
-  fgets(buf, nbuf, stdin);
-  if(buf[0] == 0) // EOF
-    return -1;
+  if(fgets(buf, nbuf, stdin) == 0)
+    return -1; // EOF
   return 0;
 }
 
@@ -150,7 +151,7 @@ redircmd(struct cmd *subcmd, char *file, int type)
   cmd->type = type;
   cmd->cmd = subcmd;
   cmd->file = file;
-  cmd->mode = (type == '<') ?  O_RDONLY : O_WRONLY|O_CREAT|O_TRUNC;
+  cmd->flags = (type == '<') ?  O_RDONLY : O_WRONLY|O_CREAT|O_TRUNC;
   cmd->fd = (type == '<') ? 0 : 1;
   return (struct cmd*)cmd;
 }
