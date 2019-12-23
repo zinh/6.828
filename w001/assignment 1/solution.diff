@@ -1,0 +1,108 @@
+diff --git a/kern/init.c b/kern/init.c
+index 30cb91d..2246219 100644
+--- a/kern/init.c
++++ b/kern/init.c
+@@ -35,6 +35,9 @@ i386_init(void)
+ 
+ 	cprintf("6828 decimal is %o octal!\n", 6828);
+ 
++	unsigned int i = 0x00646c72;
++	cprintf("H%x Wo%s\n", 57616, &i);
++
+ 	// Test the stack backtrace function (lab 1 only)
+ 	test_backtrace(5);
+ 
+diff --git a/kern/kdebug.c b/kern/kdebug.c
+index 9547143..ee575e0 100644
+--- a/kern/kdebug.c
++++ b/kern/kdebug.c
+@@ -179,7 +179,13 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
+ 	//	Look at the STABS documentation and <inc/stab.h> to find
+ 	//	which one.
+ 	// Your code here.
+-
++	lline = lfun;
++	rline = rfun;
++	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
++	if (lline <= rline) {
++		info->eip_line = stabs[lline].n_desc;
++		info->eip_code_addr = stabs[lline].n_value;
++	}
+ 
+ 	// Search backwards from the line number for the relevant filename
+ 	// stab.
+diff --git a/kern/kdebug.h b/kern/kdebug.h
+index 236af39..2c32b79 100644
+--- a/kern/kdebug.h
++++ b/kern/kdebug.h
+@@ -12,6 +12,7 @@ struct Eipdebuginfo {
+ 					//  - Note: not null terminated!
+ 	int eip_fn_namelen;		// Length of function name
+ 	uintptr_t eip_fn_addr;		// Address of start of function
++	uintptr_t eip_code_addr;
+ 	int eip_fn_narg;		// Number of function arguments
+ };
+ 
+diff --git a/kern/monitor.c b/kern/monitor.c
+index e137e92..962fed3 100644
+--- a/kern/monitor.c
++++ b/kern/monitor.c
+@@ -57,7 +57,26 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
+ int
+ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
+ {
+-	// Your code here.
++	cprintf("Stack backtrace:\n");
++	uint32_t *current_ebp;
++	int i = 0;
++	current_ebp = (uint32_t*) read_ebp();
++	while(current_ebp){
++		uint32_t current_eip = *(current_ebp + 1);
++		struct Eipdebuginfo info;
++		int debug_finder = debuginfo_eip(current_eip, &info);
++		cprintf("ebp %x eip %x args ", current_ebp, current_eip);
++		for(int i = 2; i < 7; i++)
++			cprintf("%08x ", *(current_ebp + i));
++		cprintf("\n");
++		if (debug_finder == 0){
++			cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, 
++					info.eip_fn_namelen, info.eip_fn_name, current_eip - info.eip_fn_addr);
++		} else {
++			cprintf("\n");
++		}
++		current_ebp = (uint32_t*)(*current_ebp);
++	}
+ 	return 0;
+ }
+ 
+diff --git a/lib/printfmt.c b/lib/printfmt.c
+index 28e01c9..94ee5f0 100644
+--- a/lib/printfmt.c
++++ b/lib/printfmt.c
+@@ -202,15 +202,11 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
+ 			num = getuint(&ap, lflag);
+ 			base = 10;
+ 			goto number;
+-
+ 		// (unsigned) octal
+ 		case 'o':
+-			// Replace this with your code.
+-			putch('X', putdat);
+-			putch('X', putdat);
+-			putch('X', putdat);
+-			break;
+-
++			num = getuint(&ap, lflag);
++			base = 8;
++			goto number;
+ 		// pointer
+ 		case 'p':
+ 			putch('0', putdat);
+@@ -227,7 +223,6 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
+ 		number:
+ 			printnum(putch, putdat, num, base, width, padc);
+ 			break;
+-
+ 		// escaped '%' character
+ 		case '%':
+ 			putch(ch, putdat);
