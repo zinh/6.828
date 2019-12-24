@@ -2,6 +2,8 @@
 
 __Schedule__
 
+[Homepage](https://pdos.csail.mit.edu/6.828/2018/schedule.html)
+
 - [x] Week 1
   - [x] Assignment: Lab 1: C, Assembly, Tools, and Bootstrapping([Link](https://pdos.csail.mit.edu/6.828/2018/labs/lab1/))
   - [x] Assignment: HW: Boot xv6 [Link](https://pdos.csail.mit.edu/6.828/2018/homework/xv6-boot.html)
