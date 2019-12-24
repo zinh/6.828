@@ -76,9 +76,25 @@ runcmd(struct cmd *cmd)
     runcmd(rcmd->cmd);
     break;
   case '|':
+    //int type;          // |
+    //struct cmd *left;  // left side of pipe
+    //struct cmd *right; // right side of pipe
     pcmd = (struct pipecmd*)cmd;
-    fprintf(stderr, "pipe not implemented\n");
-    // Your code here ...
+    int p[2];
+    pipe(p);
+    if (fork1() == 0) {
+      close(1); //stdout
+      dup(p[1]); // stdout -> write pipe
+      close(p[0]); // read pipe
+      close(p[1]);
+      runcmd(pcmd->left);
+    } else {
+      close(0); // stdin
+      dup(p[0]); // read-pipe -> stdin
+      close(p[0]);
+      close(p[1]);
+      runcmd(pcmd->right);
+    }
     break;
   }    
   _exit(0);
