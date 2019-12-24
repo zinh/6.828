@@ -71,11 +71,10 @@ runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    fprintf(stderr, "redir not implemented\n");
-    // Your code here ...
+    close(rcmd->fd);
+    open(rcmd->file, rcmd->flags, 0666);
     runcmd(rcmd->cmd);
     break;
-
   case '|':
     pcmd = (struct pipecmd*)cmd;
     fprintf(stderr, "pipe not implemented\n");
